@@ -1,0 +1,53 @@
+java Sleep
+INFO: Agent OnAttach.
+class_number: 440
+
+   id	  #instances	  #bytes	class_name
+----------------------------------------------------
+    1	         886	   78600	char[]
+    2	         449	   51424	java.lang.Class
+    3	           8	   24984	byte[]
+    4	         489	   24144	java.lang.Object[]
+    5	         874	   20976	java.lang.String
+    6	         256	    4096	java.lang.Integer
+    7	         107	    3424	java.util.Hashtable$Entry
+    8	          78	    3120	java.lang.ref.SoftReference
+    9	          59	    2176	java.lang.String[]
+   10	          38	    1824	sun.util.locale.LocaleObjectCache$CacheEntry
+   11	          49	    1568	java.util.concurrent.ConcurrentHashMap$Node
+   12	          22	    1408	java.net.URL
+   13	           3	    1128	java.lang.Thread
+   14	           3	    1112	int[]
+   15	           2	    1064	java.lang.invoke.MethodHandle[]
+   16	           1	    1040	java.lang.Integer[]
+   17	          26	    1040	java.io.ObjectStreamField
+   18	           6	     992	java.util.Hashtable$Entry[]
+   19	          29	     928	java.util.HashMap$Node
+   20	          10	     864	java.util.HashMap$Node[]
+
+object_number: 3849
+
+   id	  #bytes	class_name
+----------------------------------------------------
+    1	   16400	char[]
+    2	   16400	char[]
+    3	    8208	byte[]
+    4	    8208	byte[]
+    5	    8208	byte[]
+    6	    4112	java.lang.Object[]
+    7	    1040	java.lang.Integer[]
+    8	    1040	int[]
+    9	    1040	char[]
+   10	    1040	java.lang.invoke.MethodHandle[]
+   11	     984	java.lang.Object[]
+   12	     864	java.lang.Object[]
+   13	     672	char[]
+   14	     528	char[]
+   15	     528	char[]
+   16	     400	java.util.Hashtable$Entry[]
+   17	     400	java.util.Hashtable$Entry[]
+   18	     392	java.lang.Class
+   19	     384	java.lang.ref.Finalizer$FinalizerThread
+   20	     376	java.lang.Thread
+
+INFO: Agent OnUnload.

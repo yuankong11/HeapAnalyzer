@@ -1,0 +1,64 @@
+Using scaled threading model. 8 processors detected, 8 threads used to drive the workload, in a possible range of [1,400]
+INFO: Agent OnAttach.
+class_number: 1146
+
+   id	  #instances	  #bytes	class_name
+----------------------------------------------------
+    1	      136183	10894640	org.h2.result.Row
+    2	      144188	 9348720	org.h2.value.Value[]
+    3	      164180	 5253760	org.h2.index.TreeNode
+    4	       66794	 4358600	char[]
+    5	      239755	 3836080	org.h2.value.ValueStringFixed
+    6	       73037	 2921480	java.math.BigDecimal
+    7	      136137	 2178192	org.h2.value.ValueInt
+    8	       73011	 1752264	org.h2.value.ValueDecimal
+    9	       66776	 1602624	java.lang.String
+   10	         550	 1140688	byte[]
+   11	         781	  913368	java.lang.Object[]
+   12	       40524	  648384	org.h2.value.ValueString
+   13	       32764	  524224	org.h2.value.ValueShort
+   14	        1155	  134320	java.lang.Class
+   15	         163	  132424	java.util.HashMap$Node[]
+   16	        1797	   57504	java.sql.Timestamp
+   17	        1768	   56576	java.util.HashMap$Node
+   18	         558	   41392	int[]
+   19	         353	   36712	org.h2.table.Column
+   20	        1797	   28752	org.h2.value.ValueTimestamp
+
+object_number: 1188438
+
+   id	  #bytes	class_name
+----------------------------------------------------
+    1	  524304	byte[]
+    2	  524304	java.lang.Object[]
+    3	  131088	java.lang.Object[]
+    4	   65552	java.lang.Object[]
+    5	   65552	java.util.HashMap$Node[]
+    6	   40384	byte[]
+    7	   37000	byte[]
+    8	   32784	java.lang.Object[]
+    9	   32784	java.lang.Object[]
+   10	   32784	java.lang.Object[]
+   11	   32784	java.lang.Object[]
+   12	   20352	byte[]
+   13	   18720	byte[]
+   14	   17184	byte[]
+   15	   16752	byte[]
+   16	   16400	char[]
+   17	   16400	char[]
+   18	   16400	char[]
+   19	   16400	java.lang.Object[]
+   20	   16400	char[]
+
+
+Completed 400 transactions
+	Stock level .............    12 ( 3.0%)
+	Order status by name ....    11 ( 2.8%)
+	Order status by ID ......     5 ( 1.3%)
+	Payment by name .........   107 (26.8%)
+	Payment by ID ...........    64 (16.0%)
+	Delivery schedule .......    18 ( 4.5%)
+	New order ...............   179 (44.8%)
+	New order rollback ......     4 ( 1.0%)
+Resetting database to initial state
+INFO: Agent OnUnload.
