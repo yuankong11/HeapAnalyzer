@@ -13,9 +13,15 @@ typedef struct ClassInfo {
   long total_size;
 } ClassInfo;
 
+typedef struct TagInfo {
+  int class_tag;
+  int class_object_tag;
+  struct TagInfo *referrer;
+} TagInfo;
+
 typedef struct ObjectInfo {
   int size;
-  char *name;
+  TagInfo *object_tag;
 } ObjectInfo;
 
 jvmtiEnv *jvmti;
@@ -25,6 +31,7 @@ ObjectInfo **object_info_array;
 int object_number = 0;
 int object_record_number = 20;
 int class_show_number = 20;
+int backtrace_number = 2;
 
 char *getClassName(jclass cls) {
   char *sig, *name;
@@ -122,15 +129,15 @@ void initial_object_info_array(int n) {
   for (int i = 0; i < n; i++) {
     object_info_array[i] = (ObjectInfo *)malloc(sizeof(ObjectInfo));
     object_info_array[i]->size = 0;
-    object_info_array[i]->name = NULL;
+    object_info_array[i]->object_tag = 0;
   }
 }
 
-void add_object_info(int n, int size, char *name) {
+void add_object_info(int n, int size, TagInfo *tag) {
   object_number++;
   if (size > object_info_array[0]->size) {
     object_info_array[0]->size = size;
-    object_info_array[0]->name = name;
+    object_info_array[0]->object_tag = tag;
     std::sort(object_info_array, object_info_array + n, &object_info_compare);
   }
 }
@@ -141,28 +148,45 @@ jint JNICALL count_HFR(jvmtiHeapReferenceKind reference_kind,
                        jlong *tag_ptr, jlong *referrer_tag_ptr, jint length,
                        void *user_data) {
   // 当对象是java.lang.Class对象时，其tag_ptr指向所表示的类的class_tag
-  if ((*tag_ptr & 0xf) == 0) {
-    *tag_ptr |= 0x1;
-    ClassInfo *ci = class_info_array[class_tag >> 4];
+  TagInfo *ti = 0;
+  if (*tag_ptr == 0) {
+    ti = (TagInfo *)malloc(sizeof(TagInfo));
+    memset(ti, 0, sizeof(TagInfo));
+    *tag_ptr = (jlong)ti;
+  } else {
+    ti = (TagInfo *)*tag_ptr;
+  }
+  if (ti != 0 && ti->class_tag == 0) {
+    TagInfo *ctti = (TagInfo *)class_tag;
+    ti->class_tag = ctti->class_object_tag;
+    if (ti->referrer == 0) {
+      if (referrer_tag_ptr == 0) {
+        ti->referrer = 0;
+      } else {
+        ti->referrer = (TagInfo *)*referrer_tag_ptr;
+      }
+    }
+    ClassInfo *ci = class_info_array[ti->class_tag];
     ci->instance_count++;
     ci->total_size += size;
-    add_object_info(object_record_number, size, ci->name);
+    add_object_info(object_record_number, size, ti);
   }
   return JVMTI_VISIT_OBJECTS;
 }
 
-jint JNICALL count_HI(jlong class_tag, jlong size, jlong *tag_ptr, jint length,
-                      void *user_data) {
-  // 当对象是java.lang.Class对象时，其tag_ptr指向所表示的类的class_tag
-  if ((*tag_ptr & 0xf) == 0) {
-    *tag_ptr |= 0x1;
-    ClassInfo *ci = class_info_array[class_tag >> 4];
-    ci->instance_count++;
-    ci->total_size += size;
-    add_object_info(object_record_number, size, ci->name);
-  }
-  return JVMTI_VISIT_OBJECTS;
-}
+// jint JNICALL count_HI(jlong class_tag, jlong size, jlong *tag_ptr, jint
+// length,
+//                       void *user_data) {
+//   // 当对象是java.lang.Class对象时，其tag_ptr指向所表示的类的class_tag
+//   if ((*tag_ptr & 0xf) == 0) {
+//     *tag_ptr |= 0x1;
+//     ClassInfo *ci = class_info_array[class_tag >> 4];
+//     ci->instance_count++;
+//     ci->total_size += size;
+//     add_object_info(object_record_number, size, ci->name);
+//   }
+//   return JVMTI_VISIT_OBJECTS;
+// }
 
 jint JNICALL untag(jlong class_tag, jlong size, jlong *tag_ptr, jint length,
                    void *user_data) {
@@ -201,14 +225,21 @@ JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM *jvm, char *options,
   }
   printf("class_number: %d\n", class_number);
 
+  static_assert(sizeof(jlong) == sizeof(TagInfo *));
+
+  class_number++;
   class_info_array = (ClassInfo **)malloc(sizeof(ClassInfo *) * class_number);
-  for (int i = 0; i < class_number; i++) {
+  for (int i = 1; i < class_number; i++) {
     ClassInfo *ci = (ClassInfo *)malloc(sizeof(ClassInfo));
     memset(ci, 0, sizeof(ClassInfo));
     ci->id = i;
-    ci->name = getClassName(classes[i]);
+    ci->name = getClassName(classes[i - 1]);
     class_info_array[i] = ci;
-    jvmti->SetTag(classes[i], i << 4);
+    TagInfo *ti = (TagInfo *)malloc(sizeof(TagInfo));
+    ti->class_object_tag = i;
+    ti->class_tag = 0;
+    ti->referrer = 0;
+    jvmti->SetTag(classes[i - 1], (jlong)ti);
   }
   initial_object_info_array(object_record_number);
 
@@ -228,24 +259,37 @@ JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM *jvm, char *options,
   //   return err;
   // }
 
-  std::sort(class_info_array, class_info_array + class_number,
-            &class_info_compare);
-  printf("\n%5s\t%12s\t%8s\t%s\n", "id", "#instances", "#bytes", "class_name");
+  printf("object_number: %d\n", object_number);
+  printf("\n%-4s\t%-10s\t%s\n", "id", "#bytes", "class_name");
   printf("----------------------------------------------------\n");
-  for (int i = 0; i < class_show_number && i < class_number; i++) {
-    ClassInfo *ci = class_info_array[i];
-    printf("%5d\t%12d\t%8ld\t%s\n", i + 1, ci->instance_count, ci->total_size,
-           ci->name);
+  for (int i = object_record_number - 1;
+       i >= 0 && object_info_array[i]->object_tag != 0; i--) {
+    ObjectInfo *oi = object_info_array[i];
+    ClassInfo *ci = class_info_array[oi->object_tag->class_tag];
+    printf("%-4d\t%-10d\t%s", object_record_number - i, oi->size, ci->name);
+    TagInfo *ref = oi->object_tag->referrer;
+    for (int j = 0; j < backtrace_number && ref != 0; j++) {
+      ci = class_info_array[ref->class_tag];
+      printf(" <-- %s", ci->name);
+      ref = ref->referrer;
+    }
+    if (ref == 0) {
+      printf(" <-- root\n");
+    } else {
+      printf(" <-- ...\n");
+    }
   }
   printf("\n");
 
-  printf("object_number: %d\n", object_number);
-  printf("\n%5s\t%8s\t%s\n", "id", "#bytes", "class_name");
+  std::sort(class_info_array + 1, class_info_array + class_number,
+            &class_info_compare);
+  printf("\n%-4s\t%-12s\t%-15s\t%s\n", "id", "#instances", "#bytes",
+         "class_name");
   printf("----------------------------------------------------\n");
-  for (int i = object_record_number - 1;
-       i >= 0 && object_info_array[i]->name != NULL; i--) {
-    ObjectInfo *oi = object_info_array[i];
-    printf("%5d\t%8d\t%s\n", object_record_number - i, oi->size, oi->name);
+  for (int i = 1; i - 1 < class_show_number && i < class_number; i++) {
+    ClassInfo *ci = class_info_array[i];
+    printf("%-4d\t%-12d\t%-15ld\t%s\n", i, ci->instance_count, ci->total_size,
+           ci->name);
   }
   printf("\n");
 
@@ -257,7 +301,7 @@ JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM *jvm, char *options,
     return err;
   }
 
-  for (int i = 0; i < class_number; i++) {
+  for (int i = 1; i < class_number; i++) {
     free(class_info_array[i]->name);
     free(class_info_array[i]);
   }
