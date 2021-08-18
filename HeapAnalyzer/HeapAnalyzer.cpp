@@ -84,7 +84,7 @@ char *getClassName(jclass cls) {
       break;
     }
     }
-    name = (char *)malloc(l + index*2 + 1);
+    name = (char *)malloc(l + index * 2 + 1);
     if (type == 0) {
       strncpy(name, buf, l);
     } else if (type == 1) {
@@ -135,11 +135,11 @@ void add_object_info(int n, int size, char *name) {
   }
 }
 
-jint JNICALL heapFRCallback(jvmtiHeapReferenceKind reference_kind,
-                            const jvmtiHeapReferenceInfo *reference_info,
-                            jlong class_tag, jlong referrer_class_tag,
-                            jlong size, jlong *tag_ptr, jlong *referrer_tag_ptr,
-                            jint length, void *user_data) {
+jint JNICALL count_HFR(jvmtiHeapReferenceKind reference_kind,
+                       const jvmtiHeapReferenceInfo *reference_info,
+                       jlong class_tag, jlong referrer_class_tag, jlong size,
+                       jlong *tag_ptr, jlong *referrer_tag_ptr, jint length,
+                       void *user_data) {
   // 当对象是java.lang.Class对象时，其tag_ptr指向所表示的类的class_tag
   if ((*tag_ptr & 0xf) == 0) {
     *tag_ptr |= 0x1;
@@ -151,8 +151,21 @@ jint JNICALL heapFRCallback(jvmtiHeapReferenceKind reference_kind,
   return JVMTI_VISIT_OBJECTS;
 }
 
-jint JNICALL untagCallback(jlong class_tag, jlong size, jlong *tag_ptr,
-                           jint length, void *user_data) {
+jint JNICALL count_HI(jlong class_tag, jlong size, jlong *tag_ptr, jint length,
+                      void *user_data) {
+  // 当对象是java.lang.Class对象时，其tag_ptr指向所表示的类的class_tag
+  if ((*tag_ptr & 0xf) == 0) {
+    *tag_ptr |= 0x1;
+    ClassInfo *ci = class_info_array[class_tag >> 4];
+    ci->instance_count++;
+    ci->total_size += size;
+    add_object_info(object_record_number, size, ci->name);
+  }
+  return JVMTI_VISIT_OBJECTS;
+}
+
+jint JNICALL untag(jlong class_tag, jlong size, jlong *tag_ptr, jint length,
+                   void *user_data) {
   *tag_ptr = 0;
   return JVMTI_VISIT_OBJECTS;
 }
@@ -173,6 +186,12 @@ JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM *jvm, char *options,
   jvmti->AddCapabilities(&capa);
   jvmtiError err = (jvmtiError)0;
 
+  // err = jvmti->ForceGarbageCollection();
+  // if (err) {
+  //   printf("Error: JVMTI ForceGarbageCollection error code %d.\n", err);
+  //   return err;
+  // }
+
   jclass *classes;
   jint class_number;
   err = jvmti->GetLoadedClasses(&class_number, &classes);
@@ -192,14 +211,22 @@ JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM *jvm, char *options,
     jvmti->SetTag(classes[i], i << 4);
   }
   initial_object_info_array(object_record_number);
+
   jvmtiHeapCallbacks heapCallbacks;
   memset(&heapCallbacks, 0, sizeof(heapCallbacks));
-  heapCallbacks.heap_reference_callback = &heapFRCallback;
+  heapCallbacks.heap_reference_callback = &count_HFR;
   err = jvmti->FollowReferences(0, NULL, NULL, &heapCallbacks, NULL);
   if (err) {
     printf("Error: JVMTI FollowReferences error code %d.\n", err);
     return err;
   }
+  // memset(&heapCallbacks, 0, sizeof(heapCallbacks));
+  // heapCallbacks.heap_iteration_callback = &count_HI;
+  // err = jvmti->IterateThroughHeap(0, NULL, &heapCallbacks, NULL);
+  // if (err) {
+  //   printf("Error: JVMTI IterateThroughHeap error code %d.\n", err);
+  //   return err;
+  // }
 
   std::sort(class_info_array, class_info_array + class_number,
             &class_info_compare);
@@ -223,7 +250,7 @@ JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM *jvm, char *options,
   printf("\n");
 
   memset(&heapCallbacks, 0, sizeof(heapCallbacks));
-  heapCallbacks.heap_iteration_callback = &untagCallback;
+  heapCallbacks.heap_iteration_callback = &untag;
   err = jvmti->IterateThroughHeap(0, NULL, &heapCallbacks, NULL);
   if (err) {
     printf("Error: JVMTI IterateThroughHeap error code %d.\n", err);

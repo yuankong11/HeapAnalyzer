@@ -18,8 +18,24 @@ Sleep: Sleep.class
 AttachAgent.class: AttachAgent.java
 	javac -cp ${JAVA_HOME}/lib/tools.jar $^
 
-attach: AttachAgent.class Sleep.class libheapanalyzer.so
-	PID=$$(jps | grep Sleep | awk '{print $$1}') && \
+turn_off_ptrace_scope:
+	echo 0 > /proc/sys/kernel/yama/ptrace_scope
+
+NAME = Sleep
+
+dacapo: dacapo-9.12-MR1-bach.jar
+	java -jar $^ h2 -s small
+
+jmap:
+	PID=$$(jps | grep ${NAME} | awk '{print $$1}') && \
+	jmap -histo:live $${PID} > jmap.txt
+
+jmap_all:
+	PID=$$(jps | grep ${NAME} | awk '{print $$1}') && \
+	jmap -histo $${PID} > jmap.txt
+
+attach: AttachAgent.class libheapanalyzer.so
+	PID=$$(jps | grep ${NAME} | awk '{print $$1}') && \
 	java -cp ${JAVA_HOME}/lib/tools.jar:. AttachAgent $${PID} ./libheapanalyzer.so
 
 clean:

@@ -4,10 +4,10 @@ class_number: 440
 
    id	  #instances	  #bytes	class_name
 ----------------------------------------------------
-    1	         886	   78600	char[]
+    1	         886	   79000	char[]
     2	         449	   51424	java.lang.Class
     3	           8	   24984	byte[]
-    4	         489	   24144	java.lang.Object[]
+    4	         489	   24256	java.lang.Object[]
     5	         874	   20976	java.lang.String
     6	         256	    4096	java.lang.Integer
     7	         107	    3424	java.util.Hashtable$Entry
@@ -46,8 +46,8 @@ object_number: 3849
    15	     528	char[]
    16	     400	java.util.Hashtable$Entry[]
    17	     400	java.util.Hashtable$Entry[]
-   18	     392	java.lang.Class
-   19	     384	java.lang.ref.Finalizer$FinalizerThread
-   20	     376	java.lang.Thread
+   18	     392	java.lang.Object[]
+   19	     392	java.lang.Class
+   20	     384	java.lang.ref.Finalizer$FinalizerThread
 
 INFO: Agent OnUnload.
