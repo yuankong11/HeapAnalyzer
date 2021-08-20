@@ -14,9 +14,10 @@ typedef struct ClassInfo {
 } ClassInfo;
 
 typedef struct TagInfo {
-  int class_tag;
-  int class_object_tag;
-  struct TagInfo *referrer;
+  int class_tag; // 该对象所属类的tag
+  int class_object_tag; // 用于java.lang.Class对象标注其表示的类的tag
+  // 如果A是一个java.lang.Class的对象，其表示类A_class，则其class_tag指向java.lang.Class，而class_object_tag指向A_class
+  struct TagInfo *referrer; // 引用者，为0时表示由root(JNI、stack等)引用
 } TagInfo;
 
 typedef struct ObjectInfo {
@@ -29,9 +30,9 @@ ClassInfo **class_info_array;
 ObjectInfo **object_info_array;
 
 int object_number = 0;
-int object_record_number = 20;
-int class_show_number = 20;
-int backtrace_number = 2;
+int object_record_number = 20; // 记录占用空间大小最大的对象数
+int class_show_number = 20; // 展示占用空间大小最大的类数
+int backtrace_number = 2; // 大对象回溯引用的层数
 
 char *getClassName(jclass cls) {
   char *sig, *name;
@@ -160,9 +161,8 @@ jint JNICALL count_HFR(jvmtiHeapReferenceKind reference_kind,
     TagInfo *ctti = (TagInfo *)class_tag;
     ti->class_tag = ctti->class_object_tag;
     if (ti->referrer == 0) {
-      if (referrer_tag_ptr == 0) {
-        ti->referrer = 0;
-      } else {
+      // 当引用者是root时，referrer_tag_ptr为0
+      if (referrer_tag_ptr != 0) {
         ti->referrer = (TagInfo *)*referrer_tag_ptr;
       }
     }
@@ -174,23 +174,12 @@ jint JNICALL count_HFR(jvmtiHeapReferenceKind reference_kind,
   return JVMTI_VISIT_OBJECTS;
 }
 
-// jint JNICALL count_HI(jlong class_tag, jlong size, jlong *tag_ptr, jint
-// length,
-//                       void *user_data) {
-//   // 当对象是java.lang.Class对象时，其tag_ptr指向所表示的类的class_tag
-//   if ((*tag_ptr & 0xf) == 0) {
-//     *tag_ptr |= 0x1;
-//     ClassInfo *ci = class_info_array[class_tag >> 4];
-//     ci->instance_count++;
-//     ci->total_size += size;
-//     add_object_info(object_record_number, size, ci->name);
-//   }
-//   return JVMTI_VISIT_OBJECTS;
-// }
-
 jint JNICALL untag(jlong class_tag, jlong size, jlong *tag_ptr, jint length,
                    void *user_data) {
-  *tag_ptr = 0;
+  if (*tag_ptr != 0) {
+    free((void *)*tag_ptr);
+    *tag_ptr = 0;
+  }
   return JVMTI_VISIT_OBJECTS;
 }
 
@@ -209,12 +198,6 @@ JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM *jvm, char *options,
   capa.can_tag_objects = 1;
   jvmti->AddCapabilities(&capa);
   jvmtiError err = (jvmtiError)0;
-
-  // err = jvmti->ForceGarbageCollection();
-  // if (err) {
-  //   printf("Error: JVMTI ForceGarbageCollection error code %d.\n", err);
-  //   return err;
-  // }
 
   jclass *classes;
   jint class_number;
@@ -251,13 +234,6 @@ JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM *jvm, char *options,
     printf("Error: JVMTI FollowReferences error code %d.\n", err);
     return err;
   }
-  // memset(&heapCallbacks, 0, sizeof(heapCallbacks));
-  // heapCallbacks.heap_iteration_callback = &count_HI;
-  // err = jvmti->IterateThroughHeap(0, NULL, &heapCallbacks, NULL);
-  // if (err) {
-  //   printf("Error: JVMTI IterateThroughHeap error code %d.\n", err);
-  //   return err;
-  // }
 
   printf("object_number: %d\n", object_number);
   printf("\n%-4s\t%-10s\t%s\n", "id", "#bytes", "class_name");

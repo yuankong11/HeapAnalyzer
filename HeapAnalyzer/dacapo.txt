@@ -1,54 +1,55 @@
+java -jar dacapo-9.12-MR1-bach.jar h2 -s small
 Using scaled threading model. 8 processors detected, 8 threads used to drive the workload, in a possible range of [1,400]
 INFO: Agent OnAttach.
-class_number: 1146
+class_number: 1177
+object_number: 1436250
 
-   id	  #instances	  #bytes	class_name
+id  	#bytes    	class_name
 ----------------------------------------------------
-    1	      136183	10894640	org.h2.result.Row
-    2	      144188	 9348720	org.h2.value.Value[]
-    3	      164180	 5253760	org.h2.index.TreeNode
-    4	       66794	 4358600	char[]
-    5	      239755	 3836080	org.h2.value.ValueStringFixed
-    6	       73037	 2921480	java.math.BigDecimal
-    7	      136137	 2178192	org.h2.value.ValueInt
-    8	       73011	 1752264	org.h2.value.ValueDecimal
-    9	       66776	 1602624	java.lang.String
-   10	         550	 1140688	byte[]
-   11	         781	  913368	java.lang.Object[]
-   12	       40524	  648384	org.h2.value.ValueString
-   13	       32764	  524224	org.h2.value.ValueShort
-   14	        1155	  134320	java.lang.Class
-   15	         163	  132424	java.util.HashMap$Node[]
-   16	        1797	   57504	java.sql.Timestamp
-   17	        1768	   56576	java.util.HashMap$Node
-   18	         558	   41392	int[]
-   19	         353	   36712	org.h2.table.Column
-   20	        1797	   28752	org.h2.value.ValueTimestamp
+1   	524304    	byte[] <-- java.lang.Class <-- root
+2   	524304    	java.lang.Object[] <-- org.h2.util.ObjectArray <-- org.h2.index.ScanIndex <-- ...
+3   	131088    	java.lang.Object[] <-- org.h2.util.ObjectArray <-- org.h2.index.ScanIndex <-- ...
+4   	65552     	java.lang.Object[] <-- org.h2.util.ObjectArray <-- org.h2.index.ScanIndex <-- ...
+5   	65552     	java.util.HashMap$Node[] <-- java.util.HashMap <-- java.util.HashSet <-- ...
+6   	40384     	byte[] <-- java.util.HashMap$Node <-- java.util.HashMap$Node[] <-- ...
+7   	37000     	byte[] <-- java.util.HashMap$Node <-- java.util.HashMap$Node[] <-- ...
+8   	32784     	java.lang.Object[] <-- org.h2.util.ObjectArray <-- org.h2.index.ScanIndex <-- ...
+9   	32784     	java.lang.Object[] <-- org.h2.util.ObjectArray <-- org.h2.index.ScanIndex <-- ...
+10  	32784     	java.lang.Object[] <-- org.h2.util.ObjectArray <-- org.h2.index.ScanIndex <-- ...
+11  	20352     	byte[] <-- java.util.HashMap$Node <-- java.util.HashMap$Node[] <-- ...
+12  	18720     	byte[] <-- java.util.HashMap$Node <-- java.util.HashMap$Node <-- ...
+13  	17184     	byte[] <-- java.util.HashMap$Node <-- java.util.HashMap$Node <-- ...
+14  	16400     	char[] <-- java.io.BufferedWriter <-- org.dacapo.harness.TeePrintStream <-- ...
+15  	16400     	char[] <-- java.io.BufferedWriter <-- org.dacapo.harness.TeePrintStream <-- ...
+16  	16400     	char[] <-- java.io.BufferedWriter <-- java.io.PrintStream <-- ...
+17  	16400     	char[] <-- java.io.BufferedWriter <-- java.io.PrintStream <-- ...
+18  	16400     	java.lang.Object[] <-- org.h2.util.ObjectArray <-- org.h2.index.ScanIndex <-- ...
+19  	14152     	byte[] <-- java.util.HashMap$Node <-- java.util.HashMap$Node <-- ...
+20  	11344     	byte[] <-- java.util.HashMap$Node <-- java.util.HashMap$Node[] <-- ...
 
-object_number: 1188438
 
-   id	  #bytes	class_name
+id  	#instances  	#bytes         	class_name
 ----------------------------------------------------
-    1	  524304	byte[]
-    2	  524304	java.lang.Object[]
-    3	  131088	java.lang.Object[]
-    4	   65552	java.lang.Object[]
-    5	   65552	java.util.HashMap$Node[]
-    6	   40384	byte[]
-    7	   37000	byte[]
-    8	   32784	java.lang.Object[]
-    9	   32784	java.lang.Object[]
-   10	   32784	java.lang.Object[]
-   11	   32784	java.lang.Object[]
-   12	   20352	byte[]
-   13	   18720	byte[]
-   14	   17184	byte[]
-   15	   16752	byte[]
-   16	   16400	char[]
-   17	   16400	char[]
-   18	   16400	char[]
-   19	   16400	java.lang.Object[]
-   20	   16400	char[]
+1   	137151      	10972080       	org.h2.result.Row
+2   	137427      	9166928        	org.h2.value.Value[]
+3   	260975      	8351200        	org.h2.index.TreeNode
+4   	140581      	6493248        	char[]
+5   	240129      	3842064        	org.h2.value.ValueStringFixed
+6   	140542      	3373008        	java.lang.String
+7   	74082       	2963280        	java.math.BigDecimal
+8   	136736      	2187776        	org.h2.value.ValueInt
+9   	74162       	1779888        	org.h2.value.ValueDecimal
+10  	540         	1086952        	byte[]
+11  	1723        	918248         	java.lang.Object[]
+12  	40234       	643744         	org.h2.value.ValueString
+13  	32270       	516320         	org.h2.value.ValueShort
+14  	1186        	137656         	java.lang.Class
+15  	223         	137320         	java.util.HashMap$Node[]
+16  	2469        	79008          	java.util.HashMap$Node
+17  	906         	54824          	int[]
+18  	513         	49248          	sun.util.calendar.Gregorian$Date
+19  	922         	44256          	org.h2.expression.ExpressionColumn
+20  	350         	36400          	org.h2.table.Column
 
 
 Completed 400 transactions
