@@ -15,13 +15,19 @@ Sleep.class: Sleep.java
 Sleep: Sleep.class
 	java Sleep
 
+ByteHolderTest.class: ByteHolderTest.java
+	javac $^
+
+ByteHolderTest: ByteHolderTest.class
+	java ByteHolderTest
+
 AttachAgent.class: AttachAgent.java
 	javac -cp ${JAVA_HOME}/lib/tools.jar $^
 
 turn_off_ptrace_scope:
 	echo 0 > /proc/sys/kernel/yama/ptrace_scope
 
-NAME = Sleep
+NAME = ByteHolderTest
 
 dacapo: dacapo-9.12-MR1-bach.jar
 	java -jar $^ h2 -s small

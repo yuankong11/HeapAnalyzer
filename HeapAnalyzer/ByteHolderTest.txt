@@ -1,0 +1,53 @@
+java ByteHolderTest
+INFO: Agent OnAttach.
+class_number: 441
+object_number: 3870
+
+id  	#bytes    	class_name
+----------------------------------------------------
+1   	209715216 	byte[] <-- ByteHolder <-- root
+2   	104857616 	byte[] <-- ByteHolder <-- root
+3   	16400     	char[] <-- java.io.BufferedWriter <-- java.io.PrintStream <-- ...
+4   	16400     	char[] <-- java.io.BufferedWriter <-- java.io.PrintStream <-- ...
+5   	8208      	byte[] <-- java.nio.HeapByteBuffer <-- sun.nio.cs.StreamEncoder <-- ...
+6   	8208      	byte[] <-- java.nio.HeapByteBuffer <-- sun.nio.cs.StreamEncoder <-- ...
+7   	8208      	byte[] <-- java.io.BufferedInputStream <-- java.lang.Class <-- root
+8   	4112      	java.lang.Object[] <-- sun.nio.cs.StandardCharsets$Aliases <-- sun.nio.cs.StandardCharsets <-- ...
+9   	1040      	char[] <-- java.lang.String <-- java.lang.Class <-- root
+10  	1040      	java.lang.Integer[] <-- java.lang.Class <-- root
+11  	1040      	java.lang.invoke.MethodHandle[] <-- java.lang.Class <-- root
+12  	1040      	int[] <-- java.lang.Class <-- root
+13  	984       	java.lang.Object[] <-- root
+14  	864       	java.lang.Object[] <-- root
+15  	672       	char[] <-- java.lang.String <-- java.lang.Class <-- root
+16  	528       	char[] <-- java.lang.Class <-- root
+17  	528       	char[] <-- java.lang.String <-- java.lang.Class <-- root
+18  	400       	java.util.Hashtable$Entry[] <-- java.util.Properties <-- java.lang.Class <-- root
+19  	400       	java.util.Hashtable$Entry[] <-- java.util.Properties <-- java.lang.Class <-- root
+20  	392       	java.lang.Class <-- root
+
+
+id  	#instances  	#bytes         	class_name
+----------------------------------------------------
+1   	10          	314597816      	byte[]
+2   	890         	79120          	char[]
+3   	450         	51528          	java.lang.Class
+4   	489         	24144          	java.lang.Object[]
+5   	878         	21072          	java.lang.String
+6   	256         	4096           	java.lang.Integer
+7   	107         	3424           	java.util.Hashtable$Entry
+8   	78          	3120           	java.lang.ref.SoftReference
+9   	59          	2176           	java.lang.String[]
+10  	38          	1824           	sun.util.locale.LocaleObjectCache$CacheEntry
+11  	51          	1632           	java.util.concurrent.ConcurrentHashMap$Node
+12  	22          	1408           	java.net.URL
+13  	3           	1128           	java.lang.Thread
+14  	3           	1112           	int[]
+15  	2           	1064           	java.lang.invoke.MethodHandle[]
+16  	1           	1040           	java.lang.Integer[]
+17  	26          	1040           	java.io.ObjectStreamField
+18  	6           	992            	java.util.Hashtable$Entry[]
+19  	29          	928            	java.util.HashMap$Node
+20  	10          	864            	java.util.HashMap$Node[]
+
+INFO: Agent OnUnload.
