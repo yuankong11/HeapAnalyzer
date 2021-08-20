@@ -7,7 +7,7 @@ libagent.so: agent.cpp agent.hpp
 	gcc $^ ${INCLUDE} -Wall -Wno-deprecated -fPIC --share -o $@
 
 libheapanalyzer.so: HeapAnalyzer.cpp
-	gcc $^ ${INCLUDE} -Wall -Wno-deprecated -g -fPIC --share -o $@
+	gcc $^ ${INCLUDE} -Wall -Wno-deprecated -g -fPIC -lstdc++ --share -o $@
 
 Sleep.class: Sleep.java
 	javac $^

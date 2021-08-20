@@ -6,24 +6,32 @@
 #include <jni_md.h>
 #include <jvmti.h>
 
-typedef struct ClassInfo {
+struct ClassInfo {
   int id;
   char *name;
   int instance_count;
   long total_size;
-} ClassInfo;
+  ClassInfo(int id, char *name)
+      : id(id), name(name), instance_count(0), total_size(0) {}
+  ~ClassInfo() { free(name); }
+};
 
-typedef struct TagInfo {
-  int class_tag; // 该对象所属类的tag
+struct TagInfo {
+  int class_tag;        // 该对象所属类的tag
   int class_object_tag; // 用于java.lang.Class对象标注其表示的类的tag
   // 如果A是一个java.lang.Class的对象，其表示类A_class，则其class_tag指向java.lang.Class，而class_object_tag指向A_class
-  struct TagInfo *referrer; // 引用者，为0时表示由root(JNI、stack等)引用
-} TagInfo;
+  TagInfo *referrer; // 引用者，为0时表示由root(JNI、stack等)引用
+  TagInfo(int class_tag = 0, int class_object_tag = 0, TagInfo *referrer = 0)
+      : class_tag(class_tag), class_object_tag(class_object_tag),
+        referrer(referrer) {}
+};
 
-typedef struct ObjectInfo {
+struct ObjectInfo {
   int size;
   TagInfo *object_tag;
-} ObjectInfo;
+  ObjectInfo(int size = 0, TagInfo *object_tag = 0)
+      : size(size), object_tag(object_tag) {}
+};
 
 jvmtiEnv *jvmti;
 ClassInfo **class_info_array;
@@ -31,8 +39,8 @@ ObjectInfo **object_info_array;
 
 int object_number = 0;
 int object_record_number = 20; // 记录占用空间大小最大的对象数
-int class_show_number = 20; // 展示占用空间大小最大的类数
-int backtrace_number = 2; // 大对象回溯引用的层数
+int class_show_number = 20;    // 展示占用空间大小最大的类数
+int backtrace_number = 2;      // 大对象回溯引用的层数
 
 char *getClassName(jclass cls) {
   char *sig, *name;
@@ -128,14 +136,11 @@ bool class_info_compare(ClassInfo *ci1, ClassInfo *ci2) {
 void initial_object_info_array(int n) {
   object_info_array = (ObjectInfo **)malloc(sizeof(ObjectInfo *) * n);
   for (int i = 0; i < n; i++) {
-    object_info_array[i] = (ObjectInfo *)malloc(sizeof(ObjectInfo));
-    object_info_array[i]->size = 0;
-    object_info_array[i]->object_tag = 0;
+    object_info_array[i] = new ObjectInfo();
   }
 }
 
 void add_object_info(int n, int size, TagInfo *tag) {
-  object_number++;
   if (size > object_info_array[0]->size) {
     object_info_array[0]->size = size;
     object_info_array[0]->object_tag = tag;
@@ -151,8 +156,7 @@ jint JNICALL count_HFR(jvmtiHeapReferenceKind reference_kind,
   // 当对象是java.lang.Class对象时，其tag_ptr指向所表示的类的class_tag
   TagInfo *ti = 0;
   if (*tag_ptr == 0) {
-    ti = (TagInfo *)malloc(sizeof(TagInfo));
-    memset(ti, 0, sizeof(TagInfo));
+    ti = new TagInfo();
     *tag_ptr = (jlong)ti;
   } else {
     ti = (TagInfo *)*tag_ptr;
@@ -169,6 +173,7 @@ jint JNICALL count_HFR(jvmtiHeapReferenceKind reference_kind,
     ClassInfo *ci = class_info_array[ti->class_tag];
     ci->instance_count++;
     ci->total_size += size;
+    object_number++;
     add_object_info(object_record_number, size, ti);
   }
   return JVMTI_VISIT_OBJECTS;
@@ -177,7 +182,7 @@ jint JNICALL count_HFR(jvmtiHeapReferenceKind reference_kind,
 jint JNICALL untag(jlong class_tag, jlong size, jlong *tag_ptr, jint length,
                    void *user_data) {
   if (*tag_ptr != 0) {
-    free((void *)*tag_ptr);
+    delete (TagInfo *)*tag_ptr;
     *tag_ptr = 0;
   }
   return JVMTI_VISIT_OBJECTS;
@@ -213,15 +218,9 @@ JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM *jvm, char *options,
   class_number++;
   class_info_array = (ClassInfo **)malloc(sizeof(ClassInfo *) * class_number);
   for (int i = 1; i < class_number; i++) {
-    ClassInfo *ci = (ClassInfo *)malloc(sizeof(ClassInfo));
-    memset(ci, 0, sizeof(ClassInfo));
-    ci->id = i;
-    ci->name = getClassName(classes[i - 1]);
+    ClassInfo *ci = new ClassInfo(i, getClassName(classes[i - 1]));
     class_info_array[i] = ci;
-    TagInfo *ti = (TagInfo *)malloc(sizeof(TagInfo));
-    ti->class_object_tag = i;
-    ti->class_tag = 0;
-    ti->referrer = 0;
+    TagInfo *ti = new TagInfo(0, i, 0);
     jvmti->SetTag(classes[i - 1], (jlong)ti);
   }
   initial_object_info_array(object_record_number);
@@ -278,12 +277,11 @@ JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM *jvm, char *options,
   }
 
   for (int i = 1; i < class_number; i++) {
-    free(class_info_array[i]->name);
-    free(class_info_array[i]);
+    delete class_info_array[i];
   }
   free(class_info_array);
   for (int i = 0; i < object_record_number; i++) {
-    free(object_info_array[i]);
+    delete object_info_array[i];
   }
   free(object_info_array);
   jvmti->Deallocate((unsigned char *)classes);
