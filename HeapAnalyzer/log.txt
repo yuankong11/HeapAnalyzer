@@ -7,14 +7,14 @@ id  	#bytes    	class_name
 ----------------------------------------------------
 1   	16400     	char[] <-- java.io.BufferedWriter <-- java.io.PrintStream <-- ...
 2   	16400     	char[] <-- java.io.BufferedWriter <-- java.io.PrintStream <-- ...
-3   	8208      	byte[] <-- java.io.BufferedInputStream <-- java.lang.Class <-- root
-4   	8208      	byte[] <-- java.nio.HeapByteBuffer <-- sun.nio.cs.StreamEncoder <-- ...
+3   	8208      	byte[] <-- java.nio.HeapByteBuffer <-- sun.nio.cs.StreamEncoder <-- ...
+4   	8208      	byte[] <-- java.io.BufferedInputStream <-- java.lang.Class <-- root
 5   	8208      	byte[] <-- java.nio.HeapByteBuffer <-- sun.nio.cs.StreamEncoder <-- ...
 6   	4112      	java.lang.Object[] <-- sun.nio.cs.StandardCharsets$Aliases <-- sun.nio.cs.StandardCharsets <-- ...
-7   	1040      	java.lang.Integer[] <-- java.lang.Class <-- root
-8   	1040      	int[] <-- java.lang.Class <-- root
-9   	1040      	char[] <-- java.lang.String <-- java.lang.Class <-- root
-10  	1040      	java.lang.invoke.MethodHandle[] <-- java.lang.Class <-- root
+7   	1040      	java.lang.invoke.MethodHandle[] <-- java.lang.Class <-- root
+8   	1040      	char[] <-- java.lang.String <-- java.lang.Class <-- root
+9   	1040      	java.lang.Integer[] <-- java.lang.Class <-- root
+10  	1040      	int[] <-- java.lang.Class <-- root
 11  	984       	java.lang.Object[] <-- root
 12  	864       	java.lang.Object[] <-- root
 13  	672       	char[] <-- java.lang.String <-- java.lang.Class <-- root
@@ -29,7 +29,7 @@ id  	#bytes    	class_name
 
 id  	#instances  	#bytes         	class_name
 ----------------------------------------------------
-1   	887         	79024          	char[]
+1   	887         	78872          	char[]
 2   	449         	51424          	java.lang.Class
 3   	8           	24984          	byte[]
 4   	489         	24256          	java.lang.Object[]
