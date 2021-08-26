@@ -20,10 +20,11 @@ struct TagInfo {
   int class_object_tag = 0; // 用于java.lang.Class对象标注其表示的类的tag
   // 如果A是一个java.lang.Class的对象，其表示类A_class，则其class_tag指向java.lang.Class，而class_object_tag指向A_class
   TagInfo *referrer = 0; // 引用者，为0时表示由root(JNI、stack等)引用
-  TagInfo(int class_tag, int class_object_tag, TagInfo *referrer)
-      : class_tag(class_tag), class_object_tag(class_object_tag),
-        referrer(referrer) {}
+  jvmtiHeapReferenceInfoStackLocal *stack_info =
+      0; // 当引用来自JVMTI_HEAP_REFERENCE_STACK_LOCAL时，记录其reference_info
+  TagInfo(int class_object_tag) : class_object_tag(class_object_tag) {}
   TagInfo() {}
+  ~TagInfo() { free(stack_info); }
 };
 
 struct ObjectInfo {
@@ -108,13 +109,23 @@ public:
       ClassInfo *ci = class_info_array[oi->object_tag->class_tag];
       printf("%-4d\t%-10d\t%s", i + 1, oi->size, ci->name);
       TagInfo *ref = oi->object_tag->referrer;
+      TagInfo *ref_pre = oi->object_tag;
       for (int j = 0; j < backtrace_number && ref != 0; j++) {
         ci = class_info_array[ref->class_tag];
         printf(" <-- %s", ci->name);
+        ref_pre = ref;
         ref = ref->referrer;
       }
       if (ref == 0) {
-        printf(" <-- root\n");
+        printf(" <-- root");
+        if (ref_pre->stack_info != 0) {
+          char *name;
+          jvmti->GetMethodName(ref_pre->stack_info->method, &name, 0, 0);
+          printf("(local variable in method: %s)\n", name);
+          jvmti->Deallocate((unsigned char *)name);
+        } else {
+          printf("\n");
+        }
       } else {
         printf(" <-- ...\n");
       }
@@ -232,6 +243,13 @@ jint JNICALL count_HFR(jvmtiHeapReferenceKind reference_kind,
       // 当引用者是root时，referrer_tag_ptr为0
       if (referrer_tag_ptr != 0) {
         ti->referrer = (TagInfo *)*referrer_tag_ptr;
+      } else {
+        if (reference_kind == JVMTI_HEAP_REFERENCE_STACK_LOCAL) {
+          ti->stack_info = (jvmtiHeapReferenceInfoStackLocal *)malloc(
+              sizeof(jvmtiHeapReferenceInfoStackLocal));
+          memcpy(ti->stack_info, reference_info,
+                 sizeof(jvmtiHeapReferenceInfoStackLocal));
+        }
       }
     }
     ClassInfo *ci = class_info_array[ti->class_tag];
@@ -284,7 +302,7 @@ JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM *jvm, char *options,
   for (int i = 1; i < class_number; i++) {
     ClassInfo *ci = new ClassInfo(i, getClassName(classes[i - 1]));
     class_info_array[i] = ci;
-    TagInfo *ti = new TagInfo(0, i, 0);
+    TagInfo *ti = new TagInfo(i);
     jvmti->SetTag(classes[i - 1], (jlong)ti);
   }
   object_info_heap = new ObjectInfoHeap(20);
