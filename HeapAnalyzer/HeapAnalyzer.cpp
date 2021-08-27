@@ -43,6 +43,13 @@ int backtrace_number = 2;   // 大对象回溯引用的层数
 jvmtiEnv *jvmti;
 ClassInfo **class_info_array;
 
+void check_error(jvmtiError err, char const *name) {
+  if (err) {
+    printf("ERROR: JVMTI %s failed!\n", name);
+    exit(-1);
+  }
+}
+
 struct ObjectInfoHeap {
 private:
   int record_number = 0;
@@ -120,9 +127,11 @@ public:
         printf(" <-- root");
         if (ref_pre->stack_info != 0) {
           char *name;
-          jvmti->GetMethodName(ref_pre->stack_info->method, &name, 0, 0);
+          check_error(
+              jvmti->GetMethodName(ref_pre->stack_info->method, &name, 0, 0),
+              "GetMethodName");
           printf("(local variable in method: %s)\n", name);
-          jvmti->Deallocate((unsigned char *)name);
+          check_error(jvmti->Deallocate((unsigned char *)name), "Deallocate");
         } else {
           printf("\n");
         }
@@ -138,7 +147,7 @@ ObjectInfoHeap *object_info_heap;
 
 char *getClassName(jclass cls) {
   char *sig, *name;
-  jvmti->GetClassSignature(cls, &sig, NULL);
+  check_error(jvmti->GetClassSignature(cls, &sig, NULL), "GetClassSignature");
   if (sig) {
     int index = 0;
     int l = strlen(sig);
@@ -207,7 +216,7 @@ char *getClassName(jclass cls) {
       name[l++] = ']';
     }
     name[l] = 0;
-    jvmti->Deallocate((unsigned char *)sig);
+    check_error(jvmti->Deallocate((unsigned char *)sig), "Deallocate");
     char *t = name;
     while (*t) {
       if (*t == '/') {
@@ -270,29 +279,29 @@ jint JNICALL untag(jlong class_tag, jlong size, jlong *tag_ptr, jint length,
   return JVMTI_VISIT_OBJECTS;
 }
 
-// JAVA程序将会进入STW状态
-JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM *jvm, char *options,
-                                      void *reserved) {
-  printf("INFO: Agent OnAttach.\n");
-
-  jint result = jvm->GetEnv((void **)&jvmti, JVMTI_VERSION_1_1);
+void initial_agent(JavaVM *jvm) {
+  jint result = jvm->GetEnv((void **)&jvmti, JVMTI_VERSION_1_2);
   if (result != JNI_OK) {
     printf("ERROR: Unable to access JVMTI!\n");
-    return result;
+    exit(-1);
   }
   jvmtiCapabilities capa;
   memset(&capa, 0, sizeof(capa));
   capa.can_tag_objects = 1;
-  jvmti->AddCapabilities(&capa);
-  jvmtiError err = (jvmtiError)0;
+  check_error(jvmti->AddCapabilities(&capa), "AddCapabilities");
+}
 
+void destory_agent() {
+  check_error(jvmti->DisposeEnvironment(), "DisposeEnvironment");
+  jvmti = NULL;
+  fflush(stdout);
+}
+
+void heap_analyze() {
   jclass *classes;
   jint class_number;
-  err = jvmti->GetLoadedClasses(&class_number, &classes);
-  if (err) {
-    printf("ERROR: JVMTI GetLoadedClasses failed!\n");
-    return err;
-  }
+  check_error(jvmti->GetLoadedClasses(&class_number, &classes),
+              "GetLoadedClasses");
   printf("class_number: %d\n", class_number);
 
   static_assert(sizeof(jlong) == sizeof(TagInfo *));
@@ -303,18 +312,15 @@ JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM *jvm, char *options,
     ClassInfo *ci = new ClassInfo(i, getClassName(classes[i - 1]));
     class_info_array[i] = ci;
     TagInfo *ti = new TagInfo(i);
-    jvmti->SetTag(classes[i - 1], (jlong)ti);
+    check_error(jvmti->SetTag(classes[i - 1], (jlong)ti), "SetTag");
   }
   object_info_heap = new ObjectInfoHeap(20);
 
   jvmtiHeapCallbacks heapCallbacks;
   memset(&heapCallbacks, 0, sizeof(heapCallbacks));
   heapCallbacks.heap_reference_callback = &count_HFR;
-  err = jvmti->FollowReferences(0, NULL, NULL, &heapCallbacks, NULL);
-  if (err) {
-    printf("Error: JVMTI FollowReferences error code %d.\n", err);
-    return err;
-  }
+  check_error(jvmti->FollowReferences(0, NULL, NULL, &heapCallbacks, NULL),
+              "FollowReferences");
 
   printf("object_number: %d\n", object_number);
   object_info_heap->print();
@@ -333,21 +339,24 @@ JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM *jvm, char *options,
 
   memset(&heapCallbacks, 0, sizeof(heapCallbacks));
   heapCallbacks.heap_iteration_callback = &untag;
-  err = jvmti->IterateThroughHeap(0, NULL, &heapCallbacks, NULL);
-  if (err) {
-    printf("Error: JVMTI IterateThroughHeap error code %d.\n", err);
-    return err;
-  }
+  check_error(jvmti->IterateThroughHeap(0, NULL, &heapCallbacks, NULL),
+              "IterateThroughHeap");
 
   for (int i = 1; i < class_number; i++) {
     delete class_info_array[i];
   }
   free(class_info_array);
   delete object_info_heap;
-  jvmti->Deallocate((unsigned char *)classes);
-  jvmti->DisposeEnvironment();
-  jvmti = NULL;
-  fflush(stdout);
+  check_error(jvmti->Deallocate((unsigned char *)classes), "Deallocate");
+}
+
+// JAVA程序将会进入STW状态
+JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM *jvm, char *options,
+                                      void *reserved) {
+  printf("INFO: Agent OnAttach.\n");
+  initial_agent(jvm);
+  heap_analyze();
+  destory_agent();
   return JNI_OK;
 }
 
