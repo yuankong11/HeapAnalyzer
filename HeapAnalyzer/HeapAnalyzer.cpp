@@ -257,9 +257,10 @@ void HeapAnalyzer::heap_analyze() {
               "GetLoadedClasses");
   printf("class_number: %d\n", class_number);
 
-  static_assert(sizeof(jlong) == sizeof(TagInfo *));
+  static_assert(sizeof(jlong) == sizeof(TagInfo *),
+                "sizeof(jlong) should equal to sizeof(void *) ");
 
-  class_number++;
+  class_number++; // 从1开始编号
   class_info_array = (ClassInfo **)malloc(sizeof(ClassInfo *) * class_number);
   for (int i = 1; i < class_number; i++) {
     ClassInfo *ci = new ClassInfo(i, getClassName(jvmti, classes[i - 1]));
@@ -271,13 +272,15 @@ void HeapAnalyzer::heap_analyze() {
 
   jvmtiHeapCallbacks heapCallbacks;
   memset(&heapCallbacks, 0, sizeof(heapCallbacks));
+  heapCallbacks.heap_iteration_callback = HeapAnalyzer::untag;
   heapCallbacks.heap_reference_callback = HeapAnalyzer::count_HFR;
+
   void *user_data[3] = {(void *)class_info_array, (void *)&object_number,
                         (void *)object_info_heap};
   check_error(jvmti->FollowReferences(0, NULL, NULL, &heapCallbacks, user_data),
               "FollowReferences");
-
   printf("object_number: %d\n", object_number);
+
   object_info_heap->print(class_info_array, backtrace_number, jvmti);
 
   std::sort(class_info_array + 1, class_info_array + class_number,
@@ -292,8 +295,6 @@ void HeapAnalyzer::heap_analyze() {
   }
   printf("\n");
 
-  memset(&heapCallbacks, 0, sizeof(heapCallbacks));
-  heapCallbacks.heap_iteration_callback = &untag;
   check_error(jvmti->IterateThroughHeap(0, NULL, &heapCallbacks, NULL),
               "IterateThroughHeap");
 
