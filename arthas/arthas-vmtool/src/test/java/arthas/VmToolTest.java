@@ -172,6 +172,7 @@ public class VmToolTest {
 
     @Test
     public void test_getInstances_interface() {
+        @SuppressWarnings("unused")
         AAA aaa = new AAA();
         VmTool vmtool = initVmTool();
         III[] interfaceInstances = vmtool.getInstances(III.class);
@@ -181,5 +182,11 @@ public class VmToolTest {
         Assertions.assertThat(ObjectInstances.length).isEqualTo(1);
 
         Assertions.assertThat(interfaceInstances[0]).isEqualTo(ObjectInstances[0]);
+    }
+
+    @Test
+    public void testHeapAnalyzer() {
+        VmTool vmtool = initVmTool();
+        vmtool.heapAnalyze();
     }
 }

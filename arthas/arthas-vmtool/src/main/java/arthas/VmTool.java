@@ -65,6 +65,8 @@ public class VmTool implements VmToolMXBean {
      */
     private static synchronized native Class<?>[] getAllLoadedClasses0(Class<?> klass);
 
+    private static synchronized native void heapAnalyze0();
+
     @Override
     public void forceGc() {
         forceGc0();
@@ -103,4 +105,8 @@ public class VmTool implements VmToolMXBean {
         return getAllLoadedClasses0(Class.class);
     }
 
+    @Override
+    public void heapAnalyze() {
+        heapAnalyze0();
+    }
 }

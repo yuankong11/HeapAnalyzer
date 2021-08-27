@@ -50,4 +50,6 @@ public interface VmToolMXBean {
      * 获取所有已加载的类
      */
     public Class<?>[] getAllLoadedClasses();
+
+    public void heapAnalyze();
 }
