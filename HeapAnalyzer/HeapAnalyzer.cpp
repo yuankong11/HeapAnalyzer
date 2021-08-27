@@ -8,14 +8,6 @@
 
 #include "HeapAnalyzer.h"
 
-static int object_number = 0;
-static int class_show_number = 20; // 展示占用空间大小最大的类数
-static int backtrace_number = 2;   // 大对象回溯引用的层数
-
-static jvmtiEnv *jvmti;
-static ClassInfo **class_info_array;
-static ObjectInfoHeap *object_info_heap;
-
 static void check_error(jvmtiError err, char const *name) {
   if (err) {
     fprintf(stderr, "ERROR: JVMTI %s failed!\n", name);
@@ -23,94 +15,7 @@ static void check_error(jvmtiError err, char const *name) {
   }
 }
 
-void ObjectInfoHeap::swap(int i, int j) {
-  ObjectInfo *t = array[i];
-  array[i] = array[j];
-  array[j] = t;
-}
-
-void ObjectInfoHeap::adjust(int cur, int limit) {
-  int l = 2 * cur + 1, r = 2 * cur + 2, min;
-  if (l < limit && array[l]->less(array[cur])) {
-    min = l;
-  } else {
-    min = cur;
-  }
-  if (r < limit && array[r]->less(array[min])) {
-    min = r;
-  }
-  if (min != cur) {
-    swap(min, cur);
-    adjust(min, limit);
-  }
-}
-
-void ObjectInfoHeap::sort() {
-  for (int i = record_number - 1; i >= 0; i--) {
-    swap(0, i);
-    adjust(0, i);
-  }
-}
-
-ObjectInfoHeap::ObjectInfoHeap(int record_number)
-    : record_number(record_number) {
-  array = (ObjectInfo **)malloc(sizeof(ObjectInfo *) * record_number);
-  for (int i = 0; i < record_number; i++) {
-    array[i] = new ObjectInfo();
-  }
-}
-
-ObjectInfoHeap::~ObjectInfoHeap() {
-  for (int i = 0; i < record_number; i++) {
-    delete array[i];
-  }
-  free(array);
-}
-
-void ObjectInfoHeap::add(int size, TagInfo *tag) {
-  if (array[0]->size < size) {
-    array[0]->size = size;
-    array[0]->object_tag = tag;
-    adjust(0, record_number);
-  }
-}
-
-void ObjectInfoHeap::print() {
-  sort();
-  printf("\n%-4s\t%-10s\t%s\n", "id", "#bytes", "class_name");
-  printf("----------------------------------------------------\n");
-  for (int i = 0; i < record_number && array[i]->object_tag != 0; i++) {
-    ObjectInfo *oi = array[i];
-    ClassInfo *ci = class_info_array[oi->object_tag->class_tag];
-    printf("%-4d\t%-10d\t%s", i + 1, oi->size, ci->name);
-    TagInfo *ref = oi->object_tag->referrer;
-    TagInfo *ref_pre = oi->object_tag;
-    for (int j = 0; j < backtrace_number && ref != 0; j++) {
-      ci = class_info_array[ref->class_tag];
-      printf(" <-- %s", ci->name);
-      ref_pre = ref;
-      ref = ref->referrer;
-    }
-    if (ref == 0) {
-      printf(" <-- root");
-      if (ref_pre->stack_info != 0) {
-        char *name;
-        check_error(
-            jvmti->GetMethodName(ref_pre->stack_info->method, &name, 0, 0),
-            "GetMethodName");
-        printf("(local variable in method: %s)\n", name);
-        check_error(jvmti->Deallocate((unsigned char *)name), "Deallocate");
-      } else {
-        printf("\n");
-      }
-    } else {
-      printf(" <-- ...\n");
-    }
-  }
-  printf("\n");
-}
-
-static char *getClassName(jclass cls) {
+static char *getClassName(jvmtiEnv *jvmti, jclass cls) {
   char *sig, *name;
   check_error(jvmti->GetClassSignature(cls, &sig, NULL), "GetClassSignature");
   if (sig) {
@@ -193,12 +98,99 @@ static char *getClassName(jclass cls) {
   return name;
 }
 
-static jint JNICALL count_HFR(jvmtiHeapReferenceKind reference_kind,
-                              const jvmtiHeapReferenceInfo *reference_info,
-                              jlong class_tag, jlong referrer_class_tag,
-                              jlong size, jlong *tag_ptr,
-                              jlong *referrer_tag_ptr, jint length,
-                              void *user_data) {
+void ObjectInfoHeap::swap(int i, int j) {
+  ObjectInfo *t = array[i];
+  array[i] = array[j];
+  array[j] = t;
+}
+
+void ObjectInfoHeap::adjust(int cur, int limit) {
+  int l = 2 * cur + 1, r = 2 * cur + 2, min;
+  if (l < limit && array[l]->less(array[cur])) {
+    min = l;
+  } else {
+    min = cur;
+  }
+  if (r < limit && array[r]->less(array[min])) {
+    min = r;
+  }
+  if (min != cur) {
+    swap(min, cur);
+    adjust(min, limit);
+  }
+}
+
+void ObjectInfoHeap::sort() {
+  for (int i = record_number - 1; i >= 0; i--) {
+    swap(0, i);
+    adjust(0, i);
+  }
+}
+
+ObjectInfoHeap::ObjectInfoHeap(int record_number)
+    : record_number(record_number) {
+  array = (ObjectInfo **)malloc(sizeof(ObjectInfo *) * record_number);
+  for (int i = 0; i < record_number; i++) {
+    array[i] = new ObjectInfo();
+  }
+}
+
+ObjectInfoHeap::~ObjectInfoHeap() {
+  for (int i = 0; i < record_number; i++) {
+    delete array[i];
+  }
+  free(array);
+}
+
+void ObjectInfoHeap::add(int size, TagInfo *tag) {
+  if (array[0]->size < size) {
+    array[0]->size = size;
+    array[0]->object_tag = tag;
+    adjust(0, record_number);
+  }
+}
+
+void ObjectInfoHeap::print(ClassInfo **class_info_array, int backtrace_number,
+                           jvmtiEnv *jvmti) {
+  sort();
+  printf("\n%-4s\t%-10s\t%s\n", "id", "#bytes", "class_name");
+  printf("----------------------------------------------------\n");
+  for (int i = 0; i < record_number && array[i]->object_tag != 0; i++) {
+    ObjectInfo *oi = array[i];
+    ClassInfo *ci = class_info_array[oi->object_tag->class_tag];
+    printf("%-4d\t%-10d\t%s", i + 1, oi->size, ci->name);
+    TagInfo *ref = oi->object_tag->referrer;
+    TagInfo *ref_pre = oi->object_tag;
+    for (int j = 0; j < backtrace_number && ref != 0; j++) {
+      ci = class_info_array[ref->class_tag];
+      printf(" <-- %s", ci->name);
+      ref_pre = ref;
+      ref = ref->referrer;
+    }
+    if (ref == 0) {
+      printf(" <-- root");
+      if (ref_pre->stack_info != 0) {
+        char *name;
+        check_error(
+            jvmti->GetMethodName(ref_pre->stack_info->method, &name, 0, 0),
+            "GetMethodName");
+        printf("(local variable in method: %s)\n", name);
+        check_error(jvmti->Deallocate((unsigned char *)name), "Deallocate");
+      } else {
+        printf("\n");
+      }
+    } else {
+      printf(" <-- ...\n");
+    }
+  }
+  printf("\n");
+}
+
+jint JNICALL HeapAnalyzer::count_HFR(
+    jvmtiHeapReferenceKind reference_kind,
+    const jvmtiHeapReferenceInfo *reference_info, jlong class_tag,
+    jlong referrer_class_tag, jlong size, jlong *tag_ptr,
+    jlong *referrer_tag_ptr, jint length, void *user_data) {
   // 当对象是java.lang.Class对象时，其tag_ptr指向所表示的类的class_tag
   TagInfo *ti = 0;
   if (*tag_ptr == 0) {
@@ -223,17 +215,21 @@ static jint JNICALL count_HFR(jvmtiHeapReferenceKind reference_kind,
         }
       }
     }
+    ClassInfo **class_info_array = (ClassInfo **)((void **)user_data)[0];
+    int *object_number_pointer = (int *)((void **)user_data)[1];
+    ObjectInfoHeap *object_info_heap =
+        (ObjectInfoHeap *)((void **)user_data)[2];
     ClassInfo *ci = class_info_array[ti->class_tag];
     ci->instance_count++;
     ci->total_size += size;
-    object_number++;
+    (*object_number_pointer)++;
     object_info_heap->add(size, ti);
   }
   return JVMTI_VISIT_OBJECTS;
 }
 
-static jint JNICALL untag(jlong class_tag, jlong size, jlong *tag_ptr,
-                          jint length, void *user_data) {
+jint JNICALL HeapAnalyzer::untag(jlong class_tag, jlong size, jlong *tag_ptr,
+                                 jint length, void *user_data) {
   if (*tag_ptr != 0) {
     delete (TagInfo *)*tag_ptr;
     *tag_ptr = 0;
@@ -241,17 +237,20 @@ static jint JNICALL untag(jlong class_tag, jlong size, jlong *tag_ptr,
   return JVMTI_VISIT_OBJECTS;
 }
 
-void initial_agent(jvmtiEnv *env) {
-  jvmti = env;
+HeapAnalyzer::HeapAnalyzer(jvmtiEnv *jvmti, int class_show_number,
+                           int object_show_number, int backtrace_number)
+    : class_show_number(class_show_number),
+      object_show_number(object_show_number),
+      backtrace_number(backtrace_number), jvmti(jvmti) {
   jvmtiCapabilities capa;
   memset(&capa, 0, sizeof(capa));
   capa.can_tag_objects = 1;
   check_error(jvmti->AddCapabilities(&capa), "AddCapabilities");
 }
 
-void destory_agent() { jvmti = NULL; }
+HeapAnalyzer::~HeapAnalyzer() { jvmti = NULL; }
 
-void heap_analyze() {
+void HeapAnalyzer::heap_analyze() {
   jclass *classes;
   jint class_number;
   check_error(jvmti->GetLoadedClasses(&class_number, &classes),
@@ -263,21 +262,23 @@ void heap_analyze() {
   class_number++;
   class_info_array = (ClassInfo **)malloc(sizeof(ClassInfo *) * class_number);
   for (int i = 1; i < class_number; i++) {
-    ClassInfo *ci = new ClassInfo(i, getClassName(classes[i - 1]));
+    ClassInfo *ci = new ClassInfo(i, getClassName(jvmti, classes[i - 1]));
     class_info_array[i] = ci;
     TagInfo *ti = new TagInfo(i);
     check_error(jvmti->SetTag(classes[i - 1], (jlong)ti), "SetTag");
   }
-  object_info_heap = new ObjectInfoHeap(20);
+  object_info_heap = new ObjectInfoHeap(object_show_number);
 
   jvmtiHeapCallbacks heapCallbacks;
   memset(&heapCallbacks, 0, sizeof(heapCallbacks));
-  heapCallbacks.heap_reference_callback = &count_HFR;
-  check_error(jvmti->FollowReferences(0, NULL, NULL, &heapCallbacks, NULL),
+  heapCallbacks.heap_reference_callback = HeapAnalyzer::count_HFR;
+  void *user_data[3] = {(void *)class_info_array, (void *)&object_number,
+                        (void *)object_info_heap};
+  check_error(jvmti->FollowReferences(0, NULL, NULL, &heapCallbacks, user_data),
               "FollowReferences");
 
   printf("object_number: %d\n", object_number);
-  object_info_heap->print();
+  object_info_heap->print(class_info_array, backtrace_number, jvmti);
 
   std::sort(class_info_array + 1, class_info_array + class_number,
             ClassInfo::compare);
@@ -308,15 +309,14 @@ void heap_analyze() {
 JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM *jvm, char *options,
                                       void *reserved) {
   printf("INFO: Agent OnAttach.\n");
-  jvmtiEnv *env;
-  jint result = jvm->GetEnv((void **)&env, JVMTI_VERSION_1_2);
+  jvmtiEnv *jvmti;
+  jint result = jvm->GetEnv((void **)&jvmti, JVMTI_VERSION_1_2);
   if (result != JNI_OK) {
     printf("ERROR: Unable to access JVMTI!\n");
     exit(-1);
   }
-  initial_agent(env);
-  heap_analyze();
-  destory_agent();
+  HeapAnalyzer ha(jvmti);
+  ha.heap_analyze();
   return JNI_OK;
 }
 

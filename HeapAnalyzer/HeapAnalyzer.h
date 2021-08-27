@@ -11,6 +11,7 @@ public:
   char *name = 0;
   int instance_count = 0;
   long total_size = 0;
+
   ClassInfo(int id, char *name) : id(id), name(name) {}
   ~ClassInfo() { free(name); }
   static bool compare(ClassInfo *ci1, ClassInfo *ci2) {
@@ -26,6 +27,7 @@ public:
   TagInfo *referrer = 0; // 引用者，为0时表示由root(JNI、stack等)引用
   jvmtiHeapReferenceInfoStackLocal *stack_info =
       0; // 当引用来自JVMTI_HEAP_REFERENCE_STACK_LOCAL时，记录其reference_info
+
   TagInfo(int class_object_tag) : class_object_tag(class_object_tag) {}
   TagInfo() {}
   ~TagInfo() { free(stack_info); }
@@ -35,6 +37,7 @@ class ObjectInfo {
 public:
   int size = 0;
   TagInfo *object_tag = 0;
+
   ObjectInfo(int size, TagInfo *object_tag)
       : size(size), object_tag(object_tag) {}
   ObjectInfo() {}
@@ -54,11 +57,34 @@ public:
   ObjectInfoHeap(int record_number);
   ~ObjectInfoHeap();
   void add(int size, TagInfo *tag);
-  void print();
+  void print(ClassInfo **class_info_array, int backtrace_number,
+             jvmtiEnv *jvmti);
 };
 
-void initial_agent(jvmtiEnv *env);
-void destory_agent();
-void heap_analyze();
+class HeapAnalyzer {
+private:
+  int object_number = 0;
+  int class_show_number = 20;  // 展示占用空间大小最大的类数
+  int object_show_number = 20; // 展示占用空间大小最大的对象数
+  int backtrace_number = 2;    // 大对象回溯引用的层数
+  jvmtiEnv *jvmti = 0;
+  ClassInfo **class_info_array = 0;
+  ObjectInfoHeap *object_info_heap = 0;
+
+  static jint JNICALL count_HFR(jvmtiHeapReferenceKind reference_kind,
+                                const jvmtiHeapReferenceInfo *reference_info,
+                                jlong class_tag, jlong referrer_class_tag,
+                                jlong size, jlong *tag_ptr,
+                                jlong *referrer_tag_ptr, jint length,
+                                void *user_data);
+  static jint JNICALL untag(jlong class_tag, jlong size, jlong *tag_ptr,
+                            jint length, void *user_data);
+
+public:
+  HeapAnalyzer(jvmtiEnv *jvmti, int class_show_number = 20,
+               int object_show_number = 20, int backtrace_number = 2);
+  ~HeapAnalyzer();
+  void heap_analyze();
+};
 
 #endif
