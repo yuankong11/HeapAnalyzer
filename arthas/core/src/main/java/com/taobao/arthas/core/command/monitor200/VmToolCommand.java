@@ -39,7 +39,7 @@ import com.taobao.middleware.cli.annotations.Summary;
 import arthas.VmTool;
 
 /**
- * 
+ *
  * @author hengyunabc 2021-04-27
  * @author ZhangZiCheng 2021-04-29
  *
@@ -55,6 +55,7 @@ import arthas.VmTool;
         + "  vmtool --action getInstances --className java.lang.String --limit 10\n"
         + "  vmtool --action getInstances --classLoaderClass org.springframework.boot.loader.LaunchedURLClassLoader --className org.springframework.context.ApplicationContext\n"
         + "  vmtool --action forceGc\n"
+        + "  vmtool --action heapAnalyze\n"
         + Constants.WIKI + Constants.WIKI_HOME + "vmtool")
 //@formatter:on
 public class VmToolCommand extends AnnotatedCommand {
@@ -150,7 +151,7 @@ public class VmToolCommand extends AnnotatedCommand {
     }
 
     public enum VmToolAction {
-        getInstances, forceGc
+        getInstances, forceGc, heapAnalyze
     }
 
     @Override
@@ -222,6 +223,11 @@ public class VmToolCommand extends AnnotatedCommand {
                 }
             } else if (VmToolAction.forceGc.equals(action)) {
                 vmToolInstance().forceGc();
+                process.write("\n");
+                process.end();
+                return;
+            } else if (VmToolAction.heapAnalyze.equals(action)) {
+                vmToolInstance().heapAnalyze();
                 process.write("\n");
                 process.end();
                 return;

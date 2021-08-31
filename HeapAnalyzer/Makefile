@@ -21,6 +21,9 @@ ByteHolderTest.class: ByteHolderTest.java
 ByteHolderTest: ByteHolderTest.class
 	java ByteHolderTest
 
+ByteHolderTestDBG: ByteHolderTest.class
+	java -Xdebug -Xrunjdwp:transport=dt_socket,server=y,address=8000 ByteHolderTest
+
 AttachAgent.class: AttachAgent.java
 	javac -cp ${JAVA_HOME}/lib/tools.jar $^
 

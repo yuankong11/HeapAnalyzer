@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "attach",
+            "request": "attach",
+            "mainClass": "com.taobao.arthas.core.Arthas",
+            "hostName": "127.0.0.1",
+            "port": "8000"
+        }
+    ]
+}
