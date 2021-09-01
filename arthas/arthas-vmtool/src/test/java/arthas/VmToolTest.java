@@ -187,6 +187,6 @@ public class VmToolTest {
     @Test
     public void testHeapAnalyzer() {
         VmTool vmtool = initVmTool();
-        vmtool.heapAnalyze();
+        System.out.println(vmtool.heapAnalyze());
     }
 }

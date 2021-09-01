@@ -15,6 +15,14 @@ static void check_error(jvmtiError err, char const *name) {
   }
 }
 
+template <typename... Args>
+static void append_format(std::string &output, const char *data, Args... args) {
+  size_t size = 1 + snprintf(nullptr, 0, data, args...);
+  char bytes[size];
+  snprintf(bytes, size, data, args...);
+  output.append(bytes);
+}
+
 static char *getClassName(jvmtiEnv *jvmti, jclass cls) {
   char *sig, *name;
   check_error(jvmti->GetClassSignature(cls, &sig, NULL), "GetClassSignature");
@@ -151,39 +159,40 @@ void ObjectInfoHeap::add(int size, TagInfo *tag) {
 }
 
 void ObjectInfoHeap::print(ClassInfo **class_info_array, int backtrace_number,
-                           jvmtiEnv *jvmti) {
+                           jvmtiEnv *jvmti, std::string &output) {
   sort();
-  printf("\n%-4s\t%-10s\t%s\n", "id", "#bytes", "class_name");
-  printf("----------------------------------------------------\n");
+  append_format(output, "\n%-4s\t%-10s\t%s\n", "id", "#bytes", "class_name");
+  append_format(output,
+                "----------------------------------------------------\n");
   for (int i = 0; i < record_number && array[i]->object_tag != 0; i++) {
     ObjectInfo *oi = array[i];
     ClassInfo *ci = class_info_array[oi->object_tag->class_tag];
-    printf("%-4d\t%-10d\t%s", i + 1, oi->size, ci->name);
+    append_format(output, "%-4d\t%-10d\t%s", i + 1, oi->size, ci->name);
     TagInfo *ref = oi->object_tag->referrer;
     TagInfo *ref_pre = oi->object_tag;
     for (int j = 0; j < backtrace_number && ref != 0; j++) {
       ci = class_info_array[ref->class_tag];
-      printf(" <-- %s", ci->name);
+      append_format(output, " <-- %s", ci->name);
       ref_pre = ref;
       ref = ref->referrer;
     }
     if (ref == 0) {
-      printf(" <-- root");
+      append_format(output, " <-- root");
       if (ref_pre->stack_info != 0) {
         char *name;
         check_error(
             jvmti->GetMethodName(ref_pre->stack_info->method, &name, 0, 0),
             "GetMethodName");
-        printf("(local variable in method: %s)\n", name);
+        append_format(output, "(local variable in method: %s)\n", name);
         check_error(jvmti->Deallocate((unsigned char *)name), "Deallocate");
       } else {
-        printf("\n");
+        append_format(output, "\n");
       }
     } else {
-      printf(" <-- ...\n");
+      append_format(output, " <-- ...\n");
     }
   }
-  printf("\n");
+  append_format(output, "\n");
 }
 
 jint JNICALL HeapAnalyzer::count_HFR(
@@ -253,12 +262,12 @@ HeapAnalyzer::HeapAnalyzer(jvmtiEnv *jvmti, int class_show_number,
 
 HeapAnalyzer::~HeapAnalyzer() { jvmti = NULL; }
 
-void HeapAnalyzer::heap_analyze() {
+char *HeapAnalyzer::heap_analyze() {
   jclass *classes;
   jint class_number;
   check_error(jvmti->GetLoadedClasses(&class_number, &classes),
               "GetLoadedClasses");
-  printf("class_number: %d\n", class_number);
+  append_format(output, "class_number: %d\n", class_number);
 
   static_assert(sizeof(jlong) == sizeof(TagInfo *),
                 "sizeof(jlong) should equal to sizeof(void *) ");
@@ -286,21 +295,22 @@ void HeapAnalyzer::heap_analyze() {
                         (void *)object_info_heap};
   check_error(jvmti->FollowReferences(0, NULL, NULL, &heapCallbacks, user_data),
               "FollowReferences");
-  printf("object_number: %d\n", object_number);
+  append_format(output, "object_number: %d\n", object_number);
 
-  object_info_heap->print(class_info_array, backtrace_number, jvmti);
+  object_info_heap->print(class_info_array, backtrace_number, jvmti, output);
 
   std::sort(class_info_array + 1, class_info_array + class_number,
             ClassInfo::compare);
-  printf("\n%-4s\t%-12s\t%-15s\t%s\n", "id", "#instances", "#bytes",
-         "class_name");
-  printf("----------------------------------------------------\n");
+  append_format(output, "\n%-4s\t%-12s\t%-15s\t%s\n", "id", "#instances",
+                "#bytes", "class_name");
+  append_format(output,
+                "----------------------------------------------------\n");
   for (int i = 1; i - 1 < class_show_number && i < class_number; i++) {
     ClassInfo *ci = class_info_array[i];
-    printf("%-4d\t%-12d\t%-15ld\t%s\n", i, ci->instance_count, ci->total_size,
-           ci->name);
+    append_format(output, "%-4d\t%-12d\t%-15ld\t%s\n", i, ci->instance_count,
+                  ci->total_size, ci->name);
   }
-  printf("\n");
+  append_format(output, "\n");
 
   check_error(jvmti->IterateThroughHeap(JVMTI_HEAP_FILTER_UNTAGGED, NULL,
                                         &heapCallbacks, (void *)true),
@@ -312,4 +322,7 @@ void HeapAnalyzer::heap_analyze() {
   free(class_info_array);
   delete object_info_heap;
   check_error(jvmti->Deallocate((unsigned char *)classes), "Deallocate");
+  char *result = (char *)malloc(output.size() + 1);
+  strcpy(result, output.c_str());
+  return result;
 }

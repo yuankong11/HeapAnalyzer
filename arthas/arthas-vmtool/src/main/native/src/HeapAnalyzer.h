@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <jni_md.h>
 #include <jvmti.h>
+#include <string>
 
 class ClassInfo {
 public:
@@ -58,7 +59,7 @@ public:
   ~ObjectInfoHeap();
   void add(int size, TagInfo *tag);
   void print(ClassInfo **class_info_array, int backtrace_number,
-             jvmtiEnv *jvmti);
+             jvmtiEnv *jvmti, std::string &output);
 };
 
 class HeapAnalyzer {
@@ -68,6 +69,7 @@ private:
   int object_show_number = 20; // 展示占用空间大小最大的对象数
   int backtrace_number = 2;    // 大对象回溯引用的层数
   jvmtiEnv *jvmti = 0;
+  std::string output = "";
   ClassInfo **class_info_array = 0;
   ObjectInfoHeap *object_info_heap = 0;
 
@@ -84,7 +86,7 @@ public:
   HeapAnalyzer(jvmtiEnv *jvmti, int class_show_number = 20,
                int object_show_number = 20, int backtrace_number = 2);
   ~HeapAnalyzer();
-  void heap_analyze();
+  char *heap_analyze();
 };
 
 #endif

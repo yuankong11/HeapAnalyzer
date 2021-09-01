@@ -51,5 +51,5 @@ public interface VmToolMXBean {
      */
     public Class<?>[] getAllLoadedClasses();
 
-    public void heapAnalyze();
+    public String heapAnalyze();
 }

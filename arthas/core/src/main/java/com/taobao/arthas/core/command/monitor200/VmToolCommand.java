@@ -227,8 +227,8 @@ public class VmToolCommand extends AnnotatedCommand {
                 process.end();
                 return;
             } else if (VmToolAction.heapAnalyze.equals(action)) {
-                vmToolInstance().heapAnalyze();
-                process.write("\n");
+                String result = vmToolInstance().heapAnalyze();
+                process.write(result);
                 process.end();
                 return;
             }
