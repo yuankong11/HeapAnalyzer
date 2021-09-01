@@ -11,7 +11,6 @@
 static void check_error(jvmtiError err, char const *name) {
   if (err) {
     fprintf(stderr, "ERROR: JVMTI %s failed!\n", name);
-    exit(-1);
   }
 }
 

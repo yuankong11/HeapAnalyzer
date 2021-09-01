@@ -55,7 +55,7 @@ import arthas.VmTool;
         + "  vmtool --action getInstances --className java.lang.String --limit 10\n"
         + "  vmtool --action getInstances --classLoaderClass org.springframework.boot.loader.LaunchedURLClassLoader --className org.springframework.context.ApplicationContext\n"
         + "  vmtool --action forceGc\n"
-        + "  vmtool --action heapAnalyze\n"
+        + "  vmtool --action heapAnalyze --classNum 20 --objectNum 20 --backtraceNum 2\n"
         + Constants.WIKI + Constants.WIKI_HOME + "vmtool")
 //@formatter:on
 public class VmToolCommand extends AnnotatedCommand {
@@ -64,6 +64,10 @@ public class VmToolCommand extends AnnotatedCommand {
     private VmToolAction action;
     private String className;
     private String express;
+
+    private int classNum = 20;
+    private int objectNum = 20;
+    private int backtraceNum = 2;
 
     private String hashCode = null;
     private String classLoaderClass;
@@ -150,6 +154,24 @@ public class VmToolCommand extends AnnotatedCommand {
         this.express = express;
     }
 
+    @Option(longName = "classNum", required = false)
+    @Description("The number of class to be shown.")
+    public void setClassNum(int classNum) {
+        this.classNum = classNum;
+    }
+
+    @Option(longName = "objectNum", required = false)
+    @Description("The number of object to be shown.")
+    public void setObjectNum(int objectNum) {
+        this.objectNum = objectNum;
+    }
+
+    @Option(longName = "backtraceNum", required = false)
+    @Description("The steps of backtrace by reference.")
+    public void setBacktraceNum(int backtraceNum) {
+        this.backtraceNum = backtraceNum;
+    }
+
     public enum VmToolAction {
         getInstances, forceGc, heapAnalyze
     }
@@ -227,7 +249,7 @@ public class VmToolCommand extends AnnotatedCommand {
                 process.end();
                 return;
             } else if (VmToolAction.heapAnalyze.equals(action)) {
-                String result = vmToolInstance().heapAnalyze();
+                String result = vmToolInstance().heapAnalyze(classNum, objectNum, backtraceNum);
                 process.write(result);
                 process.end();
                 return;
