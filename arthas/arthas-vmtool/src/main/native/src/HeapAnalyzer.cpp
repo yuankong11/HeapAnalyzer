@@ -160,7 +160,8 @@ void ObjectInfoHeap::add(int size, TagInfo *tag) {
 void ObjectInfoHeap::print(ClassInfo **class_info_array, int backtrace_number,
                            jvmtiEnv *jvmti, std::string &output) {
   sort();
-  append_format(output, "\n%-4s\t%-10s\t%s\n", "id", "#bytes", "class_name");
+  append_format(output, "\n%-4s\t%-10s\t%s\n", "id", "#bytes",
+                "class_name & references");
   append_format(output,
                 "----------------------------------------------------\n");
   for (int i = 0; i < record_number && array[i]->object_tag != 0; i++) {
@@ -169,7 +170,8 @@ void ObjectInfoHeap::print(ClassInfo **class_info_array, int backtrace_number,
     append_format(output, "%-4d\t%-10d\t%s", i + 1, oi->size, ci->name);
     TagInfo *ref = oi->object_tag->referrer;
     TagInfo *ref_pre = oi->object_tag;
-    for (int j = 0; j < backtrace_number && ref != 0; j++) {
+    for (int j = 0;
+         (backtrace_number == -1 || j < backtrace_number) && ref != 0; j++) {
       ci = class_info_array[ref->class_tag];
       append_format(output, " <-- %s", ci->name);
       ref_pre = ref;
