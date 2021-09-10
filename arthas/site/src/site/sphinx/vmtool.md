@@ -64,7 +64,7 @@ vmtool --action getInstances -c 19469ea2 --className org.springframework.context
 
 > 通过 `-x`/`--expand` 参数可以指定结果的展开层次，默认值是1。
 
-```bash 
+```bash
 vmtool --action getInstances -c 19469ea2 --className org.springframework.context.ApplicationContext -x 2
 ```
 
@@ -83,3 +83,28 @@ vmtool --action forceGc
 ```
 
 * 可以结合 [`vmoption`](vmoption.md) 命令动态打开`PrintGC`开关。
+
+### 分析占用最大堆内存的类、对象及对象间引用关系
+
+```bash
+$ vmtool -a heapAnalyze --classNum 3 --objectNum 3 --backtraceNum 5
+class_number: 4096
+object_number: 107597
+
+id      #bytes          class_name & references
+----------------------------------------------------
+1       209715216       byte[] <-- ByteHolder <-- root(local variable in method: sleep)
+2       104857616       byte[] <-- ByteHolder <-- root(local variable in method: main)
+3       524304          char[] <-- java.lang.Object[] <-- java.util.concurrent.ArrayBlockingQueue <-- com.taobao.arthas.core.shell.term.impl.http.api.HttpApiHandler <-- com.taobao.arthas.core.server.ArthasBootstrap <-- java.lang.Class <-- root
+
+
+id      #instances      #bytes          class_name
+----------------------------------------------------
+1       7034            327112192       byte[]
+2       20523           5704616         char[]
+3       2937            631096          java.lang.Object[]
+```
+
+> 通过 `--classNum` 参数指定输出的类数量，通过 `--objectNum` 参数指定输出的对象数量，通过 `--backtraceNum` 参数指定回溯对象引用关系的层级，如果 `--backtraceNum` 被设置为-1，则表示不断回溯，直到找到根引用。
+
+> 如果对象的根引用是线程栈，那么在输出的 `root(local variable in method: sleep)` 中会显式输出该引用所处的栈帧方法名，而当对象的根引用来自其他位置，例如JNI栈帧时，无法获得其方法名，只会输出 `root` 。

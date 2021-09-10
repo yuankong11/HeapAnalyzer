@@ -82,3 +82,30 @@ vmtool --action forceGc
 ```
 
 * Use the [`vmoption`](vmoption.md) command to dynamically turn on the `PrintGC` option.
+
+### Analyze heap usage
+
+Arthas could show classes and objects that occupy most memory and show reference among objects to help locate them.
+
+```bash
+$ vmtool -a heapAnalyze --classNum 3 --objectNum 3 --backtraceNum 5
+class_number: 4096
+object_number: 107597
+
+id      #bytes          class_name & references
+----------------------------------------------------
+1       209715216       byte[] <-- ByteHolder <-- root(local variable in method: sleep)
+2       104857616       byte[] <-- ByteHolder <-- root(local variable in method: main)
+3       524304          char[] <-- java.lang.Object[] <-- java.util.concurrent.ArrayBlockingQueue <-- com.taobao.arthas.core.shell.term.impl.http.api.HttpApiHandler <-- com.taobao.arthas.core.server.ArthasBootstrap <-- java.lang.Class <-- root
+
+
+id      #instances      #bytes          class_name
+----------------------------------------------------
+1       7034            327112192       byte[]
+2       20523           5704616         char[]
+3       2937            631096          java.lang.Object[]
+```
+
+> Use the `--classNum` parameter to specify classes that will be shown, use the `--objectNum` parameter to specify objects that will be shown, use the `--backtraceNum` parameter to specify how many times of backtrace by references among objects will be done, and set `--backtraceNum` as -1 to make backtrace do not finish until root is reached.
+
+> If the root reference(the first reference from root, such as stack) of objects is stack of java threads, then the method name will be printed in `root(local variable in method: sleep)`, otherwise only `root` will be printed.
