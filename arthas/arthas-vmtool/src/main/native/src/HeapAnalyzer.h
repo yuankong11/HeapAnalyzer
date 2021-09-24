@@ -31,7 +31,11 @@ public:
 
   TagInfo(int class_object_tag) : class_object_tag(class_object_tag) {}
   TagInfo() {}
-  ~TagInfo() { free(stack_info); }
+  ~TagInfo() {
+    if (stack_info != 0) {
+      free(stack_info);
+    }
+  }
 };
 
 class ObjectInfo {
@@ -58,35 +62,36 @@ public:
   ObjectInfoHeap(int record_number);
   ~ObjectInfoHeap();
   void add(int size, TagInfo *tag);
-  void print(ClassInfo **class_info_array, int backtrace_number,
-             jvmtiEnv *jvmti, std::string &output);
+  void print(ClassInfo **class_info_array, jvmtiEnv *jvmti, std::string &output,
+             int backtrace_number);
 };
 
 class HeapAnalyzer {
 private:
   int object_number = 0;
-  int class_show_number = 20;  // 展示占用空间大小最大的类数
-  int object_show_number = 20; // 展示占用空间大小最大的对象数
-  int backtrace_number = 2;    // 大对象回溯引用的层数
-  jvmtiEnv *jvmti = 0;
-  std::string output = "";
+  jint class_number = 0;
   ClassInfo **class_info_array = 0;
-  ObjectInfoHeap *object_info_heap = 0;
+  jvmtiEnv *jvmti = 0;
 
-  static jint JNICALL count_HFR(jvmtiHeapReferenceKind reference_kind,
-                                const jvmtiHeapReferenceInfo *reference_info,
-                                jlong class_tag, jlong referrer_class_tag,
-                                jlong size, jlong *tag_ptr,
-                                jlong *referrer_tag_ptr, jint length,
-                                void *user_data);
+  static jint JNICALL tag(jvmtiHeapReferenceKind reference_kind,
+                          const jvmtiHeapReferenceInfo *reference_info,
+                          jlong class_tag, jlong referrer_class_tag, jlong size,
+                          jlong *tag_ptr, jlong *referrer_tag_ptr, jint length,
+                          void *user_data);
   static jint JNICALL untag(jlong class_tag, jlong size, jlong *tag_ptr,
                             jint length, void *user_data);
+  static jint JNICALL reference(jlong class_tag, jlong size, jlong *tag_ptr,
+                                jint length, void *user_data);
+  void get_classes();
+  void tag_objects(ObjectInfoHeap *object_info_heap);
+  void untag_objects(bool do_delete);
 
 public:
-  HeapAnalyzer(jvmtiEnv *jvmti, int class_show_number = 20,
-               int object_show_number = 20, int backtrace_number = 2);
+  HeapAnalyzer(jvmtiEnv *jvmti);
   ~HeapAnalyzer();
-  char *heap_analyze();
+  char *heap_analyze(int class_show_number = 20, int object_show_number = 20);
+  char *reference_analyze(jclass klass, int object_show_number = 20,
+                          int backtrace_number = 2);
 };
 
 #endif

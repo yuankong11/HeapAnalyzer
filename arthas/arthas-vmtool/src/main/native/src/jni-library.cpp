@@ -208,9 +208,18 @@ JNIEXPORT jobjectArray JNICALL Java_arthas_VmTool_getAllLoadedClasses0
 
 extern "C"
 JNIEXPORT jstring JNICALL Java_arthas_VmTool_heapAnalyze0
-        (JNIEnv *env, jclass thisClass, jint classNum, jint objectNum, jint backtraceNum) {
-  HeapAnalyzer ha(jvmti, classNum, objectNum, backtraceNum);
-  char *result = ha.heap_analyze();
+        (JNIEnv *env, jclass thisClass, jint classNum, jint objectNum) {
+  HeapAnalyzer ha(jvmti);
+  char *result = ha.heap_analyze(classNum, objectNum);
+  jstring s = env->NewStringUTF(result);
+  free(result);
+  return s;
+}
+
+extern "C" JNIEXPORT jstring JNICALL Java_arthas_VmTool_referenceAnalyze0(
+    JNIEnv *env, jclass thisClass, jclass klass, jint objectNum, jint backtraceNum) {
+  HeapAnalyzer ha(jvmti);
+  char *result = ha.reference_analyze(klass, objectNum, backtraceNum);
   jstring s = env->NewStringUTF(result);
   free(result);
   return s;
