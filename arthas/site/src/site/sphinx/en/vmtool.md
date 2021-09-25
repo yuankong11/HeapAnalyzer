@@ -85,27 +85,44 @@ vmtool --action forceGc
 
 ### Analyze heap usage
 
-Arthas could show classes and objects that occupy most memory and show reference among objects to help locate them.
-
 ```bash
-$ vmtool -a heapAnalyze --classNum 3 --objectNum 3 --backtraceNum 5
-class_number: 4096
-object_number: 107597
+$ vmtool -a heapAnalyze --classNum 5 --objectNum 3
+class_number: 4101
+object_number: 107299
 
-id      #bytes          class_name & references
+id      #bytes          class_name
 ----------------------------------------------------
-1       209715216       byte[] <-- ByteHolder <-- root(local variable in method: sleep)
-2       104857616       byte[] <-- ByteHolder <-- root(local variable in method: main)
-3       524304          char[] <-- java.lang.Object[] <-- java.util.concurrent.ArrayBlockingQueue <-- com.taobao.arthas.core.shell.term.impl.http.api.HttpApiHandler <-- com.taobao.arthas.core.server.ArthasBootstrap <-- java.lang.Class <-- root
+1       209715216       byte[]
+2       104857616       byte[]
+3       524304          char[]
 
 
 id      #instances      #bytes          class_name
 ----------------------------------------------------
-1       7034            327112192       byte[]
-2       20523           5704616         char[]
-3       2937            631096          java.lang.Object[]
+1       7043            327124360       byte[]
+2       20303           5660096         char[]
+3       2936            631136          java.lang.Object[]
+4       20270           486480          java.lang.String
+5       4110            462904          java.lang.Class
 ```
 
-> Use the `--classNum` parameter to specify classes that will be shown, use the `--objectNum` parameter to specify objects that will be shown, use the `--backtraceNum` parameter to specify how many times of backtrace by references among objects will be done, and set `--backtraceNum` as -1 to make backtrace do not finish until root is reached.
+> Use the `--classNum` parameter to specify classes that will be shown, use the `--objectNum` parameter to specify objects that will be shown.
 
-> If the root reference(the first reference from root, such as stack) of objects is stack of java threads, then the method name will be printed in `root(local variable in method: sleep)`, otherwise only `root` will be printed.
+# Analyze reference
+
+Use `referenceAnalyze` to show reference among objects to help locate them.
+
+```bash
+$ vmtool -a referenceAnalyze --className ByteHolder --objectNum 2 --backtraceNum -1
+
+id      #bytes          class_name & references
+----------------------------------------------------
+1       16              ByteHolder <-- root(local variable in method: main)
+2       16              ByteHolder <-- root(local variable in method: sleep)
+```
+
+> Use the `--className` parameter to specify class name, use the `--objectNum` parameter to specify objects that will be shown, use the `--backtraceNum` parameter to specify how many times of backtrace by references among objects will be done, and set `--backtraceNum` as -1 to make backtrace do not finish until root is reached.
+
+> `classLoaderClass` and `classloader` in `getInstances` is applicable here.
+
+> If the root reference(the first reference from root, such as stack) of objects is stack of java threads, then the method name will be printed in `root(local variable in method: sleep)` , otherwise only `root` will be printed.
