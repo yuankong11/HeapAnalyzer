@@ -207,7 +207,9 @@ jint JNICALL HeapAnalyzer::tag(jvmtiHeapReferenceKind reference_kind,
                                jlong size, jlong *tag_ptr,
                                jlong *referrer_tag_ptr, jint length,
                                void *user_data) {
-  // 当对象是java.lang.Class对象时，其tag_ptr指向所表示的类的class_tag
+  // java.lang.Class对象的tag_ptr已经在get_classes时设置
+  // 此处的class_tag与java.lang.Class对象的tag_ptr相同
+  // 因此该对象TagInfo中的class_tag来源于该对象class_tag所指向的TagInfo中的class_object_tag
   TagInfo *ti = 0;
   if (*tag_ptr == 0) {
     ti = new TagInfo();
